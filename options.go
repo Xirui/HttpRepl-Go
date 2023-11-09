@@ -12,9 +12,9 @@ func initOptions() string {
 	var baseAddr string
 	opt := getoptions.New()
 	opt.Bool("help", false, opt.Alias("h", "?"))
-	opt.StringVar(&baseAddr, "base-address", "config.yaml",
+	opt.StringVar(&baseAddr, "base-address", "http://localhost:8080",
 		opt.Required(), opt.Alias("b"),
-		opt.Description("The initial base address for the REPL."))
+		opt.Description("The initial base address and port for the REPL."))
 
 	if opt.Called("help") {
 		fmt.Fprint(os.Stderr, opt.Help())

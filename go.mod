@@ -1,4 +1,4 @@
-module HttpRepl-Go
+module httprepl-go
 
 go 1.21.3
 
