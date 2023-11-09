@@ -3,6 +3,7 @@ module HttpRepl-Go
 go 1.21.3
 
 require (
+	github.com/DavidGamba/go-getoptions v0.29.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/manifoldco/promptui v0.9.0
 )

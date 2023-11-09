@@ -14,9 +14,9 @@ var subdir = []string{
 	"customer [POST]",
 }
 
-const rootDir = "http://localhost:8080/api/v1"
-
-var gLabel = rootDir
+var (
+	baseAddr, gLabel string // http://localhost:8080/api/v1
+)
 
 func selectTest() []string {
 	prompt := promptui.Prompt{
@@ -32,14 +32,17 @@ func selectTest() []string {
 
 func changeDir(args []string) {
 	if len(args) == 1 {
-		gLabel = rootDir
+		gLabel = baseAddr
 		return
 	}
 	// assuming it is a valid endpoint
-	gLabel = rootDir + "/" + args[1]
+	gLabel = gLabel + "/" + args[1]
 }
 
 func main() {
+	baseAddr = initOptions()
+	gLabel = baseAddr
+	buildTree()
 mainloop:
 	for {
 		result := selectTest()
