@@ -33,5 +33,6 @@ func initOptions() string {
 	if remaining != nil {
 		log.Printf("Unhandled CLI args: %v\n", remaining)
 	}
+	fmt.Println("Using a base address of", baseAddr)
 	return baseAddr
 }

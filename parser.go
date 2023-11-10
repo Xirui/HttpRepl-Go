@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // SwaggerDoc represents the top-level structure of the Swagger JSON.
@@ -47,6 +48,7 @@ func buildTree() {
 
 	// Build the tree structure.
 	for path, methods := range swagger.Paths {
+		fmt.Println(strings.Split(path, "/"))
 		for method, endpoint := range methods {
 			// Customize the node name as needed.
 			nodeName := fmt.Sprintf("%s %s", method, path)
