@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 // SwaggerDoc represents the top-level structure of the Swagger JSON.
@@ -45,10 +47,24 @@ func buildTree() {
 		Endpoint: nil,
 		Children: make(map[string]*TreeNode),
 	}
-
 	// Build the tree structure.
 	for path, methods := range swagger.Paths {
-		fmt.Println(strings.Split(path, "/"))
+		fmt.Println(path, methods)
+		pathNames := strings.Split(path, "/")
+		fmt.Println(pathNames)
+		parent := root
+		for _, name := range pathNames { // find the parent node
+			if lo.Contains(openapiOps, name) {
+				break
+			}
+			child, ok := parent.Children[name]
+			if !ok {
+				AddNode(parent, name, nil)
+				parent = parent.Children[name]
+			} else {
+				parent = child
+			}
+		}
 		for method, endpoint := range methods {
 			// Customize the node name as needed.
 			nodeName := fmt.Sprintf("%s %s", method, path)

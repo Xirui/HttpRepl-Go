@@ -16,6 +16,7 @@ var subdir = []string{
 
 var (
 	baseAddr, gLabel string // http://localhost:8080/api/v1
+	openapiOps       = []string{"delete", "list", "get", "create", "update", "conditions"}
 )
 
 func selectTest() []string {
