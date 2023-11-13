@@ -27,6 +27,27 @@ type TreeNode struct {
 	Children map[string]*TreeNode
 }
 
+func getParent(root *TreeNode, pathNames []string) *TreeNode {
+	parent := root
+	for _, name := range pathNames { // find the parent node
+		if name == "" {
+			continue
+		}
+		if lo.Contains(openapiOps, name) {
+			break
+		}
+		child, ok := parent.Children[name]
+		if !ok {
+			AddNode(parent, name, nil)
+			parent = parent.Children[name]
+		} else {
+			parent = child
+		}
+	}
+	fmt.Println(parent.Name, pathNames)
+	return parent
+}
+
 func buildTree() {
 	// Read and parse the Swagger JSON document.
 	swaggerData, err := os.ReadFile("doc.json")
@@ -49,26 +70,12 @@ func buildTree() {
 	}
 	// Build the tree structure.
 	for path, methods := range swagger.Paths {
-		fmt.Println(path, methods)
 		pathNames := strings.Split(path, "/")
-		fmt.Println(pathNames)
-		parent := root
-		for _, name := range pathNames { // find the parent node
-			if lo.Contains(openapiOps, name) {
-				break
-			}
-			child, ok := parent.Children[name]
-			if !ok {
-				AddNode(parent, name, nil)
-				parent = parent.Children[name]
-			} else {
-				parent = child
-			}
-		}
+		parent := getParent(root, pathNames)
 		for method, endpoint := range methods {
 			// Customize the node name as needed.
 			nodeName := fmt.Sprintf("%s %s", method, path)
-			AddNode(root, nodeName, &endpoint)
+			AddNode(parent, nodeName, &endpoint)
 		}
 	}
 
