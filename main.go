@@ -43,7 +43,7 @@ func changeDir(args []string) {
 func main() {
 	baseAddr = initOptions()
 	gLabel = baseAddr
-	buildTree()
+	root := buildTree(baseAddr)
 mainloop:
 	for {
 		result := selectTest()
@@ -57,6 +57,8 @@ mainloop:
 			}
 		case "cd":
 			changeDir(result)
+		case "tree":
+			printTree(root, 0)
 		case "exit":
 			break mainloop
 		default:

@@ -48,9 +48,9 @@ func getParent(root *TreeNode, pathNames []string) *TreeNode {
 	return parent
 }
 
-func buildTree() {
+func buildTree(rootName string) *TreeNode {
 	// Read and parse the Swagger JSON document.
-	swaggerData, err := os.ReadFile("doc.json")
+	swaggerData, err := os.ReadFile("doc_multiple.json")
 	if err != nil {
 		fmt.Println("Error reading Swagger JSON:", err)
 		os.Exit(1)
@@ -64,7 +64,7 @@ func buildTree() {
 
 	// Create the root node for the tree.
 	root := &TreeNode{
-		Name:     "Root",
+		Name:     rootName,
 		Endpoint: nil,
 		Children: make(map[string]*TreeNode),
 	}
@@ -81,6 +81,7 @@ func buildTree() {
 
 	// Print the tree structure.
 	printTree(root, 0)
+	return root
 }
 
 // AddNode adds a node to the tree structure.
