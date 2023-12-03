@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"net/http"
 	"strings"
 
 	"github.com/samber/lo"
@@ -44,27 +44,33 @@ func getParent(root *TreeNode, pathNames []string) *TreeNode {
 			parent = child
 		}
 	}
-	fmt.Println(parent.Name, pathNames)
+	// fmt.Println(parent.Name, pathNames)
 	return parent
 }
 
-func buildTree(rootName string) *TreeNode {
-	// Read and parse the Swagger JSON document.
-	swaggerData, err := os.ReadFile("doc_multiple.json")
+// buildTree is a function that builds a tree structure based on a given base address and OpenAPI path.
+//
+// It takes in two parameters:
+// - baseAddr: a string representing the base address
+// - openapiPath: a string representing the OpenAPI path
+//
+// It returns a pointer to a TreeNode, which is the root of the built tree structure.
+func buildTree(baseAddr string, openapiPath string) *TreeNode {
+	fmt.Printf("Checking %v%v... ", baseAddr, openapiPath)
+	resp, err := http.Get(baseAddr + openapiPath)
 	if err != nil {
-		fmt.Println("Error reading Swagger JSON:", err)
-		os.Exit(1)
+		panic(err)
 	}
-
+	defer resp.Body.Close()
+	fmt.Printf("\x1b[32mFound\x1b[0m\n")
+	fmt.Printf("Parsing... ")
 	var swagger SwaggerDoc
-	if err := json.Unmarshal(swaggerData, &swagger); err != nil {
-		fmt.Println("Error parsing Swagger JSON:", err)
-		os.Exit(1)
+	if err := json.NewDecoder(resp.Body).Decode(&swagger); err != nil {
+		panic(err)
 	}
 
-	// Create the root node for the tree.
 	root := &TreeNode{
-		Name:     rootName,
+		Name:     baseAddr,
 		Endpoint: nil,
 		Children: make(map[string]*TreeNode),
 	}
@@ -78,8 +84,7 @@ func buildTree(rootName string) *TreeNode {
 			AddNode(parent, nodeName, &endpoint)
 		}
 	}
-
-	// Print the tree structure.
+	fmt.Printf("\x1b[32mSuccessful\x1b[0m\n")
 	printTree(root, 0)
 	return root
 }

@@ -42,6 +42,6 @@ func initOptions() argsOptions {
 	if remaining != nil {
 		log.Printf("Unhandled CLI args: %v\n", remaining)
 	}
-	fmt.Println("Using a base address of", baseAddr)
+	fmt.Println("Using a base address of", opts.baseAddr)
 	return opts
 }

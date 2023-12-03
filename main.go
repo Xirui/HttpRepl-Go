@@ -44,7 +44,7 @@ func main() {
 	opts := initOptions()
 	baseAddr = opts.baseAddr
 	gLabel = baseAddr
-	root := buildTree(baseAddr + opts.openapiPath)
+	root := buildTree(baseAddr, opts.openapiPath)
 mainloop:
 	for {
 		result := selectTest()
