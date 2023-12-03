@@ -8,13 +8,22 @@ import (
 	"github.com/DavidGamba/go-getoptions"
 )
 
-func initOptions() string {
-	var baseAddr string
+type argsOptions struct {
+	baseAddr    string
+	openapiPath string
+}
+
+func initOptions() argsOptions {
+	var opts argsOptions
 	opt := getoptions.New()
 	opt.Bool("help", false, opt.Alias("h", "?"))
-	opt.StringVar(&baseAddr, "base-address", "http://localhost:8080",
+	opt.StringVar(&opts.baseAddr, "base-address", "http://localhost:8080",
 		opt.Required(), opt.Alias("b"),
 		opt.Description("The initial base address and port for the REPL."))
+
+	opt.StringVar(&opts.openapiPath, "openapi", "/swagger/doc.json",
+		opt.Required(), opt.Alias("o"),
+		opt.Description("OpenAPI description path."))
 
 	if opt.Called("help") {
 		fmt.Fprint(os.Stderr, opt.Help())
@@ -34,5 +43,5 @@ func initOptions() string {
 		log.Printf("Unhandled CLI args: %v\n", remaining)
 	}
 	fmt.Println("Using a base address of", baseAddr)
-	return baseAddr
+	return opts
 }

@@ -15,7 +15,7 @@ var subdir = []string{
 }
 
 var (
-	baseAddr, gLabel string // http://localhost:8080/api/v1
+	baseAddr, gLabel string
 	openapiOps       = []string{"delete", "list", "get", "create", "update", "condition"}
 )
 
@@ -41,9 +41,10 @@ func changeDir(args []string) {
 }
 
 func main() {
-	baseAddr = initOptions()
+	opts := initOptions()
+	baseAddr = opts.baseAddr
 	gLabel = baseAddr
-	root := buildTree(baseAddr)
+	root := buildTree(baseAddr + opts.openapiPath)
 mainloop:
 	for {
 		result := selectTest()
