@@ -38,18 +38,31 @@ func lsImpl() {
 }
 
 func cdImpl(args []string, root *TreeNode) {
-	if len(args) == 1 {
+	if len(args) == 1 { // no argument -> go to root
 		gLabel = "/"
 		gCurrentNode = root
 		return
 	}
 	dest := args[1]
-	if dest == ".." {
-		gLabel = gLabel[:strings.LastIndex(gLabel, "/")]
-		// gCurrentNode = gCurrentNode.Parent
+	if dest == "." {
 		return
 	}
-	label := gLabel + dest + "/"
+	if dest == ".." {
+		if gCurrentNode.Parent == nil {
+			return
+		}
+		gLabel = gLabel[:strings.LastIndex(gLabel, "/")]
+		gCurrentNode = gCurrentNode.Parent
+		if gLabel == "" { // add / when cd to root
+			gLabel = "/"
+		}
+		return
+	}
+	label := gLabel
+	if label[len(label)-1] != '/' {
+		label += "/"
+	}
+	label += dest
 	for _, d := range gCurrentNode.Children {
 		if d.Name == dest {
 			gLabel = label

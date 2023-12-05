@@ -25,7 +25,7 @@ type TreeNode struct {
 	Name     string
 	Endpoint *Endpoint
 	Children map[string]*TreeNode
-	// Parent *TreeNode
+	Parent   *TreeNode
 }
 
 func getParent(root *TreeNode, pathNames []string) *TreeNode {
@@ -73,6 +73,7 @@ func buildTree(baseAddr string, openapiPath string) *TreeNode {
 	root := &TreeNode{
 		Name:     baseAddr,
 		Endpoint: nil,
+		Parent:   nil,
 		Children: make(map[string]*TreeNode),
 	}
 	// Build the tree structure.
@@ -96,6 +97,7 @@ func AddNode(parent *TreeNode, name string, endpoint *Endpoint) {
 		Name:     name,
 		Endpoint: endpoint,
 		Children: make(map[string]*TreeNode),
+		Parent:   parent,
 	}
 
 	parent.Children[name] = node
