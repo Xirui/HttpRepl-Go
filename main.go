@@ -16,6 +16,7 @@ var subdir = []string{
 
 var (
 	baseAddr, gLabel string
+	cwNode           *TreeNode // current working node
 	openapiOps       = []string{"delete", "list", "get", "create", "update", "condition"}
 )
 
@@ -45,6 +46,7 @@ func main() {
 	baseAddr = opts.baseAddr
 	gLabel = baseAddr
 	root := buildTree(baseAddr, opts.openapiPath)
+	cwNode = root
 mainloop:
 	for {
 		result := selectTest()
@@ -53,9 +55,10 @@ mainloop:
 		}
 		switch result[0] {
 		case "ls":
-			for _, d := range subdir {
-				fmt.Println(d)
+			for _, d := range cwNode.Children {
+				fmt.Println(d.Name)
 			}
+			fmt.Println("")
 		case "cd":
 			changeDir(result)
 		case "tree":
