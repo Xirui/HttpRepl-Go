@@ -4,25 +4,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
+	// "github.com/davecgh/go-spew/spew"
 	"github.com/manifoldco/promptui"
 )
 
-var subdir = []string{
-	"alert [POST]",
-	"alertEmail [POST]",
-	"customer [POST]",
-}
-
 var (
 	baseAddr, gLabel string
-	cwNode           *TreeNode // current working node
+	gCurrentNode     *TreeNode // current working node
 	openapiOps       = []string{"delete", "list", "get", "create", "update", "condition"}
 )
 
 func selectTest() []string {
 	prompt := promptui.Prompt{
-		Label: gLabel,
+		Label: baseAddr + gLabel,
 	}
 	result, _ := prompt.Run()
 	if result == "" {
@@ -32,21 +26,52 @@ func selectTest() []string {
 	return strings.Split(result, " ")
 }
 
-func changeDir(args []string) {
+func lsImpl() {
+	fmt.Println(".")
+	if gCurrentNode.Name != baseAddr {
+		fmt.Println("..")
+	}
+	for _, d := range gCurrentNode.Children {
+		fmt.Println(d.Name)
+	}
+	fmt.Println("")
+}
+
+func cdImpl(args []string, root *TreeNode) {
 	if len(args) == 1 {
-		gLabel = baseAddr
+		gLabel = "/"
+		gCurrentNode = root
 		return
 	}
-	// assuming it is a valid endpoint
-	gLabel = gLabel + "/" + args[1]
+	dest := args[1]
+	if dest == ".." {
+		gLabel = gLabel[:strings.LastIndex(gLabel, "/")]
+		// gCurrentNode = gCurrentNode.Parent
+		return
+	}
+	label := gLabel + dest + "/"
+	for _, d := range gCurrentNode.Children {
+		if d.Name == dest {
+			gLabel = label
+			gCurrentNode = d
+			return
+		}
+	}
+	msg := fmt.Sprintf("Warning: The '%v' endpoint is not present in the OpenAPI description", label)
+	fmt.Println("\x1b[33m" + msg + ".\x1b[0m\n")
+}
+
+func defaultCommand() {
+	fmt.Println("\x1b[31mNo matching command found.\x1b[0m")
+	fmt.Println("\x1b[31mExecute 'help' to see available commands.\x1b[0m\n")
 }
 
 func main() {
 	opts := initOptions()
 	baseAddr = opts.baseAddr
-	gLabel = baseAddr
+	gLabel = "/"
 	root := buildTree(baseAddr, opts.openapiPath)
-	cwNode = root
+	gCurrentNode = root
 mainloop:
 	for {
 		result := selectTest()
@@ -55,19 +80,15 @@ mainloop:
 		}
 		switch result[0] {
 		case "ls":
-			for _, d := range cwNode.Children {
-				fmt.Println(d.Name)
-			}
-			fmt.Println("")
+			lsImpl()
 		case "cd":
-			changeDir(result)
+			cdImpl(result, root)
 		case "tree":
 			printTree(root, 0)
 		case "exit":
 			break mainloop
 		default:
-			spew.Dump(result)
+			defaultCommand()
 		}
 	}
-
 }

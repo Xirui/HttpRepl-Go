@@ -25,6 +25,7 @@ type TreeNode struct {
 	Name     string
 	Endpoint *Endpoint
 	Children map[string]*TreeNode
+	// Parent *TreeNode
 }
 
 func getParent(root *TreeNode, pathNames []string) *TreeNode {
