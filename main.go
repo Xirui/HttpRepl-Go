@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
-	// "github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/manifoldco/promptui"
 )
 
@@ -74,6 +75,23 @@ func cdImpl(args []string, root *TreeNode) {
 	fmt.Println("\x1b[33m" + msg + ".\x1b[0m\n")
 }
 
+func getImpl(args []string, root *TreeNode) {
+	if len(args) != 2 {
+		fmt.Println("\x1b[31mError: Invalid number of arguments.\x1b[0m\n")
+		return
+	}
+	// {"method": "GET", "url": "/api/v1/alert/49", "request_id": "4RD3hf8qtg"}
+	query := fmt.Sprintf("%s%s/%v", baseAddr, gLabel, args[1])
+	fmt.Println(query)
+	// logger.Infoln(query)
+	if resp, err := http.Get(query); err != nil {
+		fmt.Println("\x1b[31mError: Failed to get response.\x1b[0m\n")
+	} else {
+		spew.Dump(resp.Body)
+	}
+
+}
+
 func defaultCommand() {
 	fmt.Println("\x1b[31mNo matching command found.\x1b[0m")
 	fmt.Println("\x1b[31mExecute 'help' to see available commands.\x1b[0m\n")
@@ -96,6 +114,8 @@ mainloop:
 			lsImpl()
 		case "cd":
 			cdImpl(result, root)
+		case "get":
+			getImpl(result, root)
 		case "tree":
 			printTree(root, 0)
 		case "exit":
