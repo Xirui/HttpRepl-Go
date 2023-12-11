@@ -73,7 +73,9 @@ mainloop:
 		case "cd":
 			cdImpl(result, root)
 		case "get":
-			getImpl(result, root)
+			getImpl(result)
+		case "delete":
+			deleteImpl(result)
 		case "tree":
 			printTree(root, 0)
 		case "exit":

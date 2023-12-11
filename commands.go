@@ -80,16 +80,25 @@ func prettyJSON(body []byte) {
 	fmt.Println(string(prettyJSON))
 }
 
-func getImpl(args []string, root *TreeNode) {
+func printHeader(resp *http.Response) {
+	fmt.Println(resp.Status)
+	for k, v := range resp.Header {
+		fmt.Printf("%v: %v\n", k, v[0])
+	}
+}
+
+func getImpl(args []string) {
 	if len(args) != 2 {
-		fmt.Println("\x1b[31mError: Invalid number of arguments.\x1b[0m\n")
+		fmt.Println("\x1b[31mArgumentCountOutOfRange -- 2\x1b[0m")
+		fmt.Println("Usage: GET [Options]")
 		return
 	}
 	query := fmt.Sprintf("%s%s/%v", baseAddr, gLabel, args[1])
 	fmt.Println(query)
 	resp, err := http.Get(query)
 	if err != nil {
-		fmt.Println("\x1b[31mError: Failed to get response.\x1b[0m\n")
+		fmt.Println("\x1b[31mError: Failed to get response.\x1b[0m")
+		return
 	} else {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
@@ -97,14 +106,38 @@ func getImpl(args []string, root *TreeNode) {
 			fmt.Println("Error reading response:", err)
 			return
 		}
-		fmt.Println(resp.Status)
-		spew.Dump(resp.Header)
+		printHeader(resp)
+		prettyJSON(body)
+	}
+}
+
+func deleteImpl(args []string) {
+	if len(args) != 2 {
+		fmt.Println("\x1b[31mArgumentCountOutOfRange -- 2\x1b[0m\n")
+		fmt.Println("Usage: DELETE [Options]")
+		return
+	}
+	query := fmt.Sprintf("%s%s/%v", baseAddr, gLabel, args[1])
+	fmt.Println(query)
+	req, _ := http.NewRequest("DELETE", query, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("Failed sending DELETE request:", err)
+		return
+	} else {
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Error reading response:", err)
+			return
+		}
+		printHeader(resp)
 		prettyJSON(body)
 	}
 }
 
 func defaultCommand() {
-	spew.Dump(gCurrentNode)
+	spew.Dump(gLabel)
 	fmt.Println("\x1b[31mNo matching command found.\x1b[0m")
 	fmt.Println("\x1b[31mExecute 'help' to see available commands.\x1b[0m\n")
 }
