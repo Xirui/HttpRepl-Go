@@ -11,7 +11,9 @@
             "mode": "auto",
             "program": "${workspaceFolder}",
             "args": [
-                "-b", "http://localhost:8080"
+                "-b", "http://localhost:8080",
+                "-o", "/swagger/doc.json",
+                "-u", "/api/v1/alert"
             ]
         },
         {

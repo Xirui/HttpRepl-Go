@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -75,6 +77,28 @@ func cdImpl(args []string, root *TreeNode) {
 	fmt.Println("\x1b[33m" + msg + ".\x1b[0m\n")
 }
 
+func prettyJSON(body []byte) {
+	// Create an empty interface to store the unmarshalled JSON data
+	var parsedJSON interface{}
+
+	// Unmarshal the JSON data into the interface
+	err := json.Unmarshal(body, &parsedJSON)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Pretty print the JSON using MarshalIndent
+	prettyJSON, err := json.MarshalIndent(parsedJSON, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Print the pretty printed JSON as a string
+	fmt.Println(string(prettyJSON))
+}
+
 func getImpl(args []string, root *TreeNode) {
 	if len(args) != 2 {
 		fmt.Println("\x1b[31mError: Invalid number of arguments.\x1b[0m\n")
@@ -84,17 +108,50 @@ func getImpl(args []string, root *TreeNode) {
 	query := fmt.Sprintf("%s%s/%v", baseAddr, gLabel, args[1])
 	fmt.Println(query)
 	// logger.Infoln(query)
-	if resp, err := http.Get(query); err != nil {
+	resp, err := http.Get(query)
+	if err != nil {
 		fmt.Println("\x1b[31mError: Failed to get response.\x1b[0m\n")
 	} else {
-		spew.Dump(resp.Body)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Error reading response:", err)
+			return
+		}
+		fmt.Println(resp.Status)
+		spew.Dump(resp.Header)
+		prettyJSON(body)
 	}
 
 }
 
 func defaultCommand() {
+	spew.Dump(gCurrentNode)
 	fmt.Println("\x1b[31mNo matching command found.\x1b[0m")
 	fmt.Println("\x1b[31mExecute 'help' to see available commands.\x1b[0m\n")
+}
+
+func startupURL(opts argsOptions, root *TreeNode) {
+	if opts.startURL == "" {
+		return
+	}
+	url := opts.startURL
+	if url[0] != '/' {
+		url = "/" + url
+	}
+	gLabel = url
+	path := strings.Split(gLabel, "/")
+	for _, p := range path {
+		if p == "" {
+			continue
+		}
+		gCurrentNode = gCurrentNode.Children[p]
+		if gCurrentNode == nil {
+			gLabel = "/"
+			gCurrentNode = root
+			return
+		}
+	}
 }
 
 func main() {
@@ -103,6 +160,8 @@ func main() {
 	gLabel = "/"
 	root := buildTree(baseAddr, opts.openapiPath)
 	gCurrentNode = root
+	startupURL(opts, root)
+
 mainloop:
 	for {
 		result := selectTest()

@@ -11,6 +11,7 @@ import (
 type argsOptions struct {
 	baseAddr    string
 	openapiPath string
+	startURL    string
 }
 
 func initOptions() argsOptions {
@@ -24,6 +25,9 @@ func initOptions() argsOptions {
 	opt.StringVar(&opts.openapiPath, "openapi", "/swagger/doc.json",
 		opt.Required(), opt.Alias("o"),
 		opt.Description("OpenAPI description path."))
+
+	opt.StringVar(&opts.startURL, "start-url", "/api/v1",
+		opt.Alias("u"), opt.Description("Start URL."))
 
 	if opt.Called("help") {
 		fmt.Fprint(os.Stderr, opt.Help())
