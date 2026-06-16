@@ -1,6 +1,6 @@
 module httprepl-go
 
-go 1.21.3
+go 1.25.6
 
 require (
 	github.com/DavidGamba/go-getoptions v0.29.0

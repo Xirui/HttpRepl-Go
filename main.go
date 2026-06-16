@@ -26,8 +26,12 @@ func selectTest() []string {
 	if result == "" {
 		return nil
 	}
-	// fmt.Printf("Perform operation: %q\n", result)
-	return strings.Split(result, " ")
+	args, err := splitArgs(result)
+	if err != nil {
+		fmt.Printf("\x1b[31mError parsing command: %v\x1b[0m\n", err)
+		return nil
+	}
+	return args
 }
 
 func startupURL(opts argsOptions, root *TreeNode) {
@@ -67,17 +71,29 @@ mainloop:
 		if result == nil {
 			continue
 		}
-		switch result[0] {
+		switch strings.ToLower(result[0]) {
 		case "ls":
 			lsImpl()
 		case "cd":
 			cdImpl(result, root)
-		case "get":
-			getImpl(result)
-		case "delete":
-			deleteImpl(result)
+		case "get", "post", "put", "delete", "patch", "head", "options":
+			makeRequest(strings.ToUpper(result[0]), result)
+		case "set":
+			if len(result) >= 2 && result[1] == "header" {
+				handleHeaderCommand(result)
+			} else {
+				fmt.Println("Unknown set command. Use 'set header <name> <value>'")
+			}
+		case "clear":
+			if len(result) >= 2 && result[1] == "header" {
+				handleClearCommand(result)
+			} else {
+				fmt.Println("Unknown clear command. Use 'clear header <name>'")
+			}
 		case "tree":
 			printTree(root, 0)
+		case "help":
+			helpImpl()
 		case "exit":
 			break mainloop
 		default:
