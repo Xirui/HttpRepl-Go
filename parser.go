@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -65,8 +66,9 @@ func buildTree(baseAddr string, openapiPath string) *TreeNode {
 	defer resp.Body.Close()
 	fmt.Printf("\x1b[32mFound\x1b[0m\n")
 	fmt.Printf("Parsing... ")
+	body, _ := io.ReadAll(resp.Body)
 	var swagger SwaggerDoc
-	if err := json.NewDecoder(resp.Body).Decode(&swagger); err != nil {
+	if err := json.NewDecoder(strings.NewReader(string(body))).Decode(&swagger); err != nil {
 		panic(err)
 	}
 
