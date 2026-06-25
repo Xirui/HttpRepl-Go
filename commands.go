@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
@@ -15,13 +16,40 @@ import (
 
 var gHeaders = make(map[string]string)
 
+func getMethodKeys(node *TreeNode) []string {
+	var keys []string
+	for m := range node.Methods {
+		keys = append(keys, strings.ToLower(m))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func lsImpl() {
-	fmt.Println(".")
-	if gCurrentNode.Name != baseAddr {
+	if len(gCurrentNode.Methods) > 0 {
+		methods := getMethodKeys(gCurrentNode)
+		fmt.Printf(".    [%s]\n", strings.Join(methods, "|"))
+	} else {
+		fmt.Println(".")
+	}
+	if gCurrentNode.Parent != nil {
 		fmt.Println("..")
 	}
-	for _, d := range gCurrentNode.Children {
-		fmt.Println(d.Name)
+
+	var childNames []string
+	for name := range gCurrentNode.Children {
+		childNames = append(childNames, name)
+	}
+	sort.Strings(childNames)
+
+	for _, name := range childNames {
+		child := gCurrentNode.Children[name]
+		methods := getMethodKeys(child)
+		if len(methods) > 0 {
+			fmt.Printf("%s    [%s]\n", name, strings.Join(methods, "|"))
+		} else {
+			fmt.Printf("%s\n", name)
+		}
 	}
 	fmt.Println("")
 }
@@ -63,32 +91,103 @@ func cdImpl(args []string, root *TreeNode) {
 	fmt.Println("\x1b[33m" + msg + ".\x1b[0m\n")
 }
 
-func prettyJSON(body []byte) {
-	// Create an empty interface to store the unmarshalled JSON data
-	var parsedJSON interface{}
+func highlightJSON(jsonStr string) string {
+	var result strings.Builder
+	inQuote := false
+	var currentWord strings.Builder
+	runes := []rune(jsonStr)
 
-	// Unmarshal the JSON data into the interface
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '"' {
+			if inQuote {
+				isKey := false
+				for j := i + 1; j < len(runes); j++ {
+					if runes[j] == ' ' || runes[j] == '\t' || runes[j] == '\n' || runes[j] == '\r' {
+						continue
+					}
+					if runes[j] == ':' {
+						isKey = true
+					}
+					break
+				}
+				currentWord.WriteRune(r)
+				if isKey {
+					result.WriteString("\x1b[33m" + currentWord.String() + "\x1b[0m") // Yellow for keys
+				} else {
+					result.WriteString("\x1b[32m" + currentWord.String() + "\x1b[0m") // Green for strings
+				}
+				currentWord.Reset()
+				inQuote = false
+			} else {
+				inQuote = true
+				currentWord.WriteRune(r)
+			}
+			continue
+		}
+
+		if inQuote {
+			currentWord.WriteRune(r)
+			continue
+		}
+
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '.' {
+			currentWord.WriteRune(r)
+			nextIsWordChar := false
+			if i+1 < len(runes) {
+				nr := runes[i+1]
+				if (nr >= 'a' && nr <= 'z') || (nr >= '0' && nr <= '9') || nr == '-' || nr == '.' {
+					nextIsWordChar = true
+				}
+			}
+			if !nextIsWordChar {
+				result.WriteString("\x1b[35m" + currentWord.String() + "\x1b[0m") // Magenta for other literals
+				currentWord.Reset()
+			}
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+func prettyJSON(body []byte) {
+	var parsedJSON interface{}
 	err := json.Unmarshal(body, &parsedJSON)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Pretty print the JSON using MarshalIndent
-	prettyJSON, err := json.MarshalIndent(parsedJSON, "", "  ")
+	pretty, err := json.MarshalIndent(parsedJSON, "", "  ")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Print the pretty printed JSON as a string
-	fmt.Println(string(prettyJSON))
+	fmt.Println(highlightJSON(string(pretty)))
 }
 
 func printHeader(resp *http.Response) {
-	fmt.Println(resp.Status)
-	for k, v := range resp.Header {
-		fmt.Printf("%v: %v\n", k, v[0])
+	statusColor := "\x1b[0m"
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		statusColor = "\x1b[32m" // Green
+	} else if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		statusColor = "\x1b[33m" // Yellow
+	} else if resp.StatusCode >= 400 {
+		statusColor = "\x1b[31m" // Red
+	}
+	fmt.Printf("%s%s\x1b[0m\n", statusColor, resp.Status)
+
+	var keys []string
+	for k := range resp.Header {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := resp.Header[k]
+		fmt.Printf("\x1b[1;36m%v\x1b[0m: %v\n", k, v[0])
 	}
 }
 
@@ -156,17 +255,25 @@ func makeRequest(method string, args []string) {
 		}
 	}
 
+	pathPart := subPath
+	queryPart := ""
+	if idx := strings.Index(subPath, "?"); idx != -1 {
+		pathPart = subPath[:idx]
+		queryPart = subPath[idx:]
+	}
+
 	u := baseAddr
 	if !strings.HasSuffix(u, "/") && !strings.HasPrefix(gLabel, "/") {
 		u += "/"
 	}
 	u += gLabel
-	if subPath != "" {
-		if !strings.HasSuffix(u, "/") && !strings.HasPrefix(subPath, "/") {
+	if pathPart != "" {
+		if !strings.HasSuffix(u, "/") && !strings.HasPrefix(pathPart, "/") {
 			u += "/"
 		}
-		u += subPath
+		u += pathPart
 	}
+	u += queryPart
 
 	var reqBody io.Reader
 	if method == "POST" || method == "PUT" || method == "PATCH" {
