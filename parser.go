@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -18,13 +17,12 @@ type SwaggerDoc struct {
 // Endpoint represents an API endpoint in the Swagger JSON.
 type Endpoint struct {
 	Summary string `json:"summary"`
-	// Add other fields as needed
 }
 
 // TreeNode represents a node in the tree structure.
 type TreeNode struct {
 	Name     string
-	Endpoint *Endpoint
+	Methods  map[string]*Endpoint
 	Children map[string]*TreeNode
 	Parent   *TreeNode
 }
@@ -40,23 +38,15 @@ func getParent(root *TreeNode, pathNames []string) *TreeNode {
 		}
 		child, ok := parent.Children[name]
 		if !ok {
-			AddNode(parent, name, nil)
-			parent = parent.Children[name]
+			parent = AddNode(parent, name)
 		} else {
 			parent = child
 		}
 	}
-	// fmt.Println(parent.Name, pathNames)
 	return parent
 }
 
 // buildTree is a function that builds a tree structure based on a given base address and OpenAPI path.
-//
-// It takes in two parameters:
-// - baseAddr: a string representing the base address
-// - openapiPath: a string representing the OpenAPI path
-//
-// It returns a pointer to a TreeNode, which is the root of the built tree structure.
 func buildTree(baseAddr string, openapiPath string) *TreeNode {
 	fmt.Printf("Checking %v%v... ", baseAddr, openapiPath)
 	resp, err := http.Get(baseAddr + openapiPath)
@@ -66,15 +56,14 @@ func buildTree(baseAddr string, openapiPath string) *TreeNode {
 	defer resp.Body.Close()
 	fmt.Printf("\x1b[32mFound\x1b[0m\n")
 	fmt.Printf("Parsing... ")
-	body, _ := io.ReadAll(resp.Body)
 	var swagger SwaggerDoc
-	if err := json.NewDecoder(strings.NewReader(string(body))).Decode(&swagger); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&swagger); err != nil {
 		panic(err)
 	}
 
 	root := &TreeNode{
 		Name:     baseAddr,
-		Endpoint: nil,
+		Methods:  make(map[string]*Endpoint),
 		Parent:   nil,
 		Children: make(map[string]*TreeNode),
 	}
@@ -83,9 +72,7 @@ func buildTree(baseAddr string, openapiPath string) *TreeNode {
 		pathNames := strings.Split(path, "/")
 		parent := getParent(root, pathNames)
 		for method, endpoint := range methods {
-			// Customize the node name as needed.
-			nodeName := fmt.Sprintf("%s %s", method, path)
-			AddNode(parent, nodeName, &endpoint)
+			parent.Methods[strings.ToUpper(method)] = &endpoint
 		}
 	}
 	fmt.Printf("\x1b[32mSuccessful\x1b[0m\n")
@@ -94,15 +81,16 @@ func buildTree(baseAddr string, openapiPath string) *TreeNode {
 }
 
 // AddNode adds a node to the tree structure.
-func AddNode(parent *TreeNode, name string, endpoint *Endpoint) {
+func AddNode(parent *TreeNode, name string) *TreeNode {
 	node := &TreeNode{
 		Name:     name,
-		Endpoint: endpoint,
+		Methods:  make(map[string]*Endpoint),
 		Children: make(map[string]*TreeNode),
 		Parent:   parent,
 	}
 
 	parent.Children[name] = node
+	return node
 }
 
 // printTree recursively prints the tree structure.
@@ -111,7 +99,17 @@ func printTree(node *TreeNode, depth int) {
 		return
 	}
 
-	fmt.Printf("%s- %s\n", getIndent(depth), node.Name)
+	indent := getIndent(depth)
+	var methodList []string
+	for m := range node.Methods {
+		methodList = append(methodList, strings.ToLower(m))
+	}
+	
+	if len(methodList) > 0 {
+		fmt.Printf("%s- %s [%s]\n", indent, node.Name, strings.Join(methodList, "|"))
+	} else {
+		fmt.Printf("%s- %s\n", indent, node.Name)
+	}
 
 	for _, child := range node.Children {
 		printTree(child, depth+1)
