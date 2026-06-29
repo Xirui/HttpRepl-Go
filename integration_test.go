@@ -9,10 +9,11 @@ import (
 )
 
 type recordedReq struct {
-	Method string
-	Path   string
-	Header http.Header
-	Body   string
+	Method   string
+	Path     string
+	RawQuery string
+	Header   http.Header
+	Body     string
 }
 
 func TestIntegration(t *testing.T) {
@@ -25,10 +26,11 @@ func TestIntegration(t *testing.T) {
 
 		bodyBytes, _ := io.ReadAll(r.Body)
 		lastReq = recordedReq{
-			Method: r.Method,
-			Path:   r.URL.Path,
-			Header: r.Header,
-			Body:   string(bodyBytes),
+			Method:   r.Method,
+			Path:     r.URL.Path,
+			RawQuery: r.URL.RawQuery,
+			Header:   r.Header,
+			Body:     string(bodyBytes),
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -71,15 +73,43 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("GET request with query params only", func(t *testing.T) {
+		makeRequest("GET", []string{"get", "?limit=5"})
+
+		mu.Lock()
+		req := lastReq
+		mu.Unlock()
+
+		if req.Path != "/api/v1/users" {
+			t.Errorf("expected /api/v1/users, got %s", req.Path)
+		}
+		if req.RawQuery != "limit=5" {
+			t.Errorf("expected limit=5, got %s", req.RawQuery)
+		}
+	})
+
+	t.Run("GET request with subpath and query params", func(t *testing.T) {
+		makeRequest("GET", []string{"get", "info?limit=10"})
+
+		mu.Lock()
+		req := lastReq
+		mu.Unlock()
+
+		if req.Path != "/api/v1/users/info" {
+			t.Errorf("expected /api/v1/users/info, got %s", req.Path)
+		}
+		if req.RawQuery != "limit=10" {
+			t.Errorf("expected limit=10, got %s", req.RawQuery)
+		}
+	})
+
 	// 2. Custom headers
 	t.Run("Header commands", func(t *testing.T) {
-		// Set header
 		handleHeaderCommand([]string{"set", "header", "X-Test-Header", "HelloHeader"})
 		if gHeaders["X-Test-Header"] != "HelloHeader" {
 			t.Errorf("expected header to be set")
 		}
 
-		// Make a GET request and verify header is sent
 		makeRequest("GET", []string{"get"})
 		
 		mu.Lock()
@@ -90,7 +120,6 @@ func TestIntegration(t *testing.T) {
 			t.Errorf("expected header X-Test-Header to be HelloHeader, got %s", req.Header.Get("X-Test-Header"))
 		}
 
-		// Clear header
 		handleClearCommand([]string{"clear", "header", "X-Test-Header"})
 		if _, ok := gHeaders["X-Test-Header"]; ok {
 			t.Errorf("expected header to be cleared")
