@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"strings"
 
@@ -65,6 +67,14 @@ func main() {
 	gCurrentNode = root
 	startupURL(opts, root)
 
+	// Initialize Cookie Jar
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		fmt.Printf("Warning: Failed to initialize cookie jar: %v\n", err)
+	} else {
+		http.DefaultClient.Jar = jar
+	}
+
 mainloop:
 	for {
 		result := selectTest()
@@ -81,14 +91,24 @@ mainloop:
 		case "set":
 			if len(result) >= 2 && result[1] == "header" {
 				handleHeaderCommand(result)
+			} else if len(result) >= 2 && result[1] == "cookie" {
+				handleCookieCommand(result)
 			} else {
-				fmt.Println("Unknown set command. Use 'set header <name> <value>'")
+				fmt.Println("Unknown set command. Use 'set header <name> <value>' or 'set cookie <name> <value>'")
 			}
 		case "clear":
 			if len(result) >= 2 && result[1] == "header" {
 				handleClearCommand(result)
+			} else if len(result) >= 2 && result[1] == "cookie" {
+				handleClearCookieCommand(result)
 			} else {
-				fmt.Println("Unknown clear command. Use 'clear header <name>'")
+				fmt.Println("Unknown clear command. Use 'clear header <name>' or 'clear cookie <name>'")
+			}
+		case "show":
+			if len(result) >= 2 && result[1] == "cookies" {
+				showCookiesImpl()
+			} else {
+				fmt.Println("Unknown show command. Use 'show cookies'")
 			}
 		case "tree":
 			printTree(root, 0)
