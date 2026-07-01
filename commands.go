@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"sort"
@@ -361,6 +362,90 @@ func handleClearCommand(args []string) {
 	fmt.Printf("Header '%s' cleared.\n", key)
 }
 
+func getBaseURL() *url.URL {
+	u, err := url.Parse(baseAddr)
+	if err != nil {
+		u, _ = url.Parse("http://localhost")
+	}
+	return u
+}
+
+func handleCookieCommand(args []string) {
+	if len(args) < 2 {
+		fmt.Println("Usage: set cookie [name [value]]")
+		return
+	}
+	if len(args) == 2 {
+		showCookiesImpl()
+		return
+	}
+	name := args[2]
+	if len(args) == 3 {
+		clearCookie(name)
+		fmt.Printf("Cookie '%s' cleared.\n", name)
+		return
+	}
+	value := strings.Join(args[3:], " ")
+
+	jar := http.DefaultClient.Jar
+	if jar == nil {
+		fmt.Println("Error: Cookie jar is not initialized.")
+		return
+	}
+
+	u := getBaseURL()
+	cookie := &http.Cookie{
+		Name:  name,
+		Value: value,
+		Path:  "/",
+	}
+
+	jar.SetCookies(u, []*http.Cookie{cookie})
+	fmt.Printf("Cookie '%s' set to '%s'.\n", name, value)
+}
+
+func clearCookie(name string) {
+	jar := http.DefaultClient.Jar
+	if jar == nil {
+		return
+	}
+	u := getBaseURL()
+	cookie := &http.Cookie{
+		Name:   name,
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	}
+	jar.SetCookies(u, []*http.Cookie{cookie})
+}
+
+func handleClearCookieCommand(args []string) {
+	if len(args) < 3 || args[1] != "cookie" {
+		fmt.Println("Usage: clear cookie <name>")
+		return
+	}
+	name := args[2]
+	clearCookie(name)
+	fmt.Printf("Cookie '%s' cleared.\n", name)
+}
+
+func showCookiesImpl() {
+	jar := http.DefaultClient.Jar
+	if jar == nil {
+		fmt.Println("Cookie jar is not initialized.")
+		return
+	}
+	u := getBaseURL()
+	cookies := jar.Cookies(u)
+	if len(cookies) == 0 {
+		fmt.Println("No cookies set.")
+		return
+	}
+	for _, c := range cookies {
+		fmt.Printf("%s: %s\n", c.Name, c.Value)
+	}
+}
+
 func helpImpl() {
 	fmt.Println("Available Commands:")
 	fmt.Println("  ls                   List directory (endpoints and HTTP verbs)")
@@ -368,6 +453,9 @@ func helpImpl() {
 	fmt.Println("  tree                 Print the path tree structure")
 	fmt.Println("  set header [k [v]]   Set or clear a custom header, or list all custom headers")
 	fmt.Println("  clear header <k>     Clear a custom header")
+	fmt.Println("  set cookie [k [v]]   Set or clear a cookie, or list all cookies")
+	fmt.Println("  clear cookie <k>     Clear a cookie")
+	fmt.Println("  show cookies         Show all cookies currently in the jar")
 	fmt.Println("  get [sub-path]       Perform a GET request")
 	fmt.Println("  post [sub-path]      Perform a POST request")
 	fmt.Println("  put [sub-path]       Perform a PUT request")
